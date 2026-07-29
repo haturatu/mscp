@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
@@ -483,8 +484,21 @@ int main(int argc, char **argv)
 	if (quiet)
 		to_dev_null(STDOUT_FILENO);
 
+	/* Preserve credentials while removing them from the environment. */
 	s.password = getenv(ENV_SSH_AUTH_PASSWORD);
 	s.passphrase = getenv(ENV_SSH_AUTH_PASSPHRASE);
+	if (s.password) {
+		char *p = s.password;
+		s.password = strdup(p);
+		memset(p, 0, strlen(p));
+	}
+	if (s.passphrase) {
+		char *p = s.passphrase;
+		s.passphrase = strdup(p);
+		memset(p, 0, strlen(p));
+	}
+	unsetenv(ENV_SSH_AUTH_PASSWORD);
+	unsetenv(ENV_SSH_AUTH_PASSPHRASE);
 
 	if ((m = mscp_init(&o, &s)) == NULL) {
 		pr_err("mscp_init: %s", priv_get_err());
